@@ -68,10 +68,12 @@ void buttonInterrupt(){
     }
     if(outputOn == true){
       //turn off output
-
-
-       
-      outputOn = true;
+      //sigGen.reset(1);
+      //sigGen.setFreq(dispFrequency);
+      //sigGen.setFPRegister(1);
+      //sigGen.mode(mode);
+      //sigGen.reset(0); 
+      //outputOn = true;
       //Set LCD to "OFF"
       lcd.setCursor(1,12);
       lcd.print("OFF"); 
@@ -157,6 +159,6 @@ void loop() {
   lcd.print(menuTitle[menuPos]);
   lcd.setCursor(1,1);
   lcd.print(dispFrequency);
-  delay(500);
+  delay(100);
 
 }
