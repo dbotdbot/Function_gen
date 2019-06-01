@@ -23,12 +23,62 @@ const int ypin = A2;
 const int switch_pin = 9;
 
 int menuPos = 0;                                           // variables for the display menu
-long dispFrequency = 1;                                    // 
-long maxFrequency = 100;
-long startFreq = 1;
-long endFreq = 2;  
 String menuTitle[5] = {"Freq Sweep", "PWM", "Sine Wave", "Triangle Wave", "Square Wave"};
+unsigned long dispFrequency = 1;                                    // 
+unsigned long maxFrequency = 100;
+unsigned long startFreq = 1;
+unsigned long endFreq = 2; 
+bool outputOn = false; 
 
+//initialize AD9833 object
+AD9833 sigGen(30, 24000000);
+unsigned long mode = 0;
+
+//setup pins
+pinMode(switch_pin, INPUT_PULLUP);
+
+//attach interrupt
+attachInterrupt(digitalPinToInterrupt(switch_pin), buttonInterrupt, FALLING);
+
+void buttonInterrupt(){
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  if (interrupt_time - last_interrupt_time > 200){
+    //work out on/off logic
+    if(outputOn == false){
+      //turn on output
+      if(menuPos <= 2){
+        mode = 0;
+      }
+      if(menuPos == 3){
+        mode = 1;
+      }
+      if(menuPos == 4){
+        mode = 2;
+      }
+      sigGen.reset(1);
+      sigGen.setFreq(dispFrequency);
+      sigGen.setFPRegister(1);
+      sigGen.mode(mode);
+      sigGen.reset(0);
+      outputOn = true;
+      //Set LCD to "ON"
+      lcd.setCursor(1,12);
+      lcd.print("ON ");
+    }
+    if(outputOn == true){
+      //turn off output
+
+
+       
+      outputOn = true;
+      //Set LCD to "OFF"
+      lcd.setCursor(1,12);
+      lcd.print("OFF"); 
+    }
+  }
+  last_interrupt_time = interrupt_time;
+}
                                                           // the setup function runs once when you press reset or power the board
 void setup() {
   // initialize digital pin 13 and 9 as an output.
