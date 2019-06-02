@@ -20,31 +20,31 @@ LiquidCrystal_I2C lcd(0x27,16,2);                          // set the LCD addres
 
 const int xpin = A3;                                       // variables for the joystick  
 const int ypin = A2;
-const int switch_pin = 9;
+const int switch_pin = 3;
+const int FSYNC = 2;
+
+//debug LEDs
+const int LED1 = 7;
+const int LED2 = 8; 
 
 int menuPos = 0;                                           // variables for the display menu
 String menuTitle[5] = {"Freq Sweep", "PWM", "Sine Wave", "Triangle Wave", "Square Wave"};
-unsigned long dispFrequency = 1;                                    // 
-unsigned long maxFrequency = 100;
+unsigned long dispFrequency = 100;                                    // 
+unsigned long maxFrequency = 100000;
 unsigned long startFreq = 1;
 unsigned long endFreq = 2; 
 bool outputOn = false; 
 
 //initialize AD9833 object
-AD9833 sigGen(30, 24000000);
+AD9833 sigGen(FSYNC, 24000000);
 unsigned long mode = 0;
-
-//setup pins
-pinMode(switch_pin, INPUT_PULLUP);
-
-//attach interrupt
-attachInterrupt(digitalPinToInterrupt(switch_pin), buttonInterrupt, FALLING);
 
 void buttonInterrupt(){
   static unsigned long last_interrupt_time = 0;
   unsigned long interrupt_time = millis();
   if (interrupt_time - last_interrupt_time > 200){
     //work out on/off logic
+    digitalWrite(LED2, HIGH);
     if(outputOn == false){
       //turn on output
       if(menuPos <= 2){
@@ -63,20 +63,22 @@ void buttonInterrupt(){
       sigGen.reset(0);
       outputOn = true;
       //Set LCD to "ON"
-      lcd.setCursor(1,12);
-      lcd.print("ON ");
+      digitalWrite(LED1, HIGH);
+      //lcd.setCursor(1,12);
+      //lcd.print("ON ");
+      digitalWrite(LED2, LOW);
     }
-    if(outputOn == true){
+    else{
       //turn off output
-      //sigGen.reset(1);
-      //sigGen.setFreq(dispFrequency);
-      //sigGen.setFPRegister(1);
-      //sigGen.mode(mode);
-      //sigGen.reset(0); 
-      //outputOn = true;
+      sigGen.reset(1);
+      sigGen.setFreq(dispFrequency);
+      sigGen.setFPRegister(1);
+      sigGen.mode(mode);
+      sigGen.reset(0); 
+      outputOn = false;
       //Set LCD to "OFF"
-      lcd.setCursor(1,12);
-      lcd.print("OFF"); 
+      //lcd.setCursor(1,12);
+      //lcd.print("OFF"); 
     }
   }
   last_interrupt_time = interrupt_time;
@@ -86,9 +88,12 @@ void setup() {
   // initialize digital pin 13 and 9 as an output.
   pinMode(9, OUTPUT);
   pinMode(13, OUTPUT);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(switch_pin, INPUT_PULLUP);
 
-  
-  
+  //attach interrupt
+  attachInterrupt(digitalPinToInterrupt(switch_pin), buttonInterrupt, FALLING);
 
   lcd.init();                                             // initialize the lcd 
   // Print a intro message to the LCD.
@@ -106,7 +111,7 @@ void setup() {
 
 // the loop function runs over and over again forever
 void loop() {
-
+  
   //////////////////////////////////////read joystick to change menu postion//////////////////////////
   //if stick in down position
   if (analogRead(ypin) < 100){
@@ -130,21 +135,23 @@ void loop() {
 
   //if stick in left position
   if (analogRead(xpin) < 100){
-    if(dispFrequency == 1){
+    if(dispFrequency <= 100){
       //do nothing
+      dispFrequency = 100;
     }
     else{
-      dispFrequency -= 1;
+      dispFrequency -= 100;
     }
   }
 
   //if stick in right position
   if (analogRead(xpin) > 900){
-    if(dispFrequency == maxFrequency){
+    if(dispFrequency >= maxFrequency){
       //do nothing
+      dispFrequency = maxFrequency;
     }
     else{
-      dispFrequency += 1;
+      dispFrequency += 100;
     }
   }
 
@@ -157,8 +164,17 @@ void loop() {
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(menuTitle[menuPos]);
-  lcd.setCursor(1,1);
+  lcd.setCursor(0,1);
   lcd.print(dispFrequency);
+  lcd.print(" Hertz");
+  if(outputOn == true){
+    lcd.setCursor(12,1);
+    lcd.print("ON ");
+  }
+  else{
+    lcd.setCursor(12,1);
+    lcd.print("OFF");
+  }
   delay(100);
 
 }
